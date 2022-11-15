@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[2]:
 
 
 import re
@@ -9,7 +9,7 @@ import math
 import sys
 
 
-# In[2]:
+# In[3]:
 
 
 class Person:
@@ -33,7 +33,7 @@ class Person:
         self.children = children
 
 
-# In[3]:
+# In[4]:
 
 
 def Percent(x,total):
@@ -89,7 +89,7 @@ def Distribution(inputlist, start, end, interval):
 
 
 
-# In[4]:
+# In[51]:
 
 
 # Open file
@@ -180,7 +180,7 @@ for line in infile:
         isbloodType = None
         
         # Search for CPR and save it
-        isbloodType = re.search(r'\:\s(\w(\+|\-)?)', line)
+        isbloodType = re.search(r'\:\s(\w+(\+|\-)?)', line)
         if isbloodType != None:
             bloodType = isbloodType.group(1)
             currentPerson.bloodType = bloodType
@@ -204,7 +204,7 @@ for line in infile:
 infile.close()  
 
 
-# In[93]:
+# In[74]:
 
 
 #Initialization
@@ -322,9 +322,11 @@ for person in data:
                 if len(women) > 1:
                     countMoreWomen += 1
                     for woman in women:
-                        couples.append([person, mother])
+                        if [person, woman] not in couples:
+                            couples.append([person, mother])
                 else:
-                    couples.append([person, women[0]])  
+                    if [person, women[0]] not in couples:
+                        couples.append([person, women[0]])  
                 women = []
             
             # Save cpr for each child no duplicates
@@ -429,30 +431,71 @@ for children in cprChildrenList:
 print(Average([Average(i) for i in cousinNumber]))
 
 # 16 Task
-# Key = father cpr, value = son(s) cpr and common blood type
+# Key = father cpr, value = son(s) cpr and common blood type, dictionary of fathers/sons/bloodtype that can donate blood to their sons
 FatherSonDonateBlood = dict()
-
+#
+grandparent = dict()
+# Number of sons that their father can doate blood to them
+counterSon = 0
+#
+counterGrandparents = 0
+# couples = (object male,object female)
 for couple in couples:
     temp = list()
-    print(couple[0].cpr)
+    
     male = couple[0]
-    bloodType = male.bloodType
-    for child in male.children:
-        print(child)
+    female = couple[1]
+    #print(male.bloodType, male.cpr)
+    bloodTypeMale = male.bloodType
+    bloodTypeFemale = female.bloodType
+    for child in (male.children):
         for person in data:
+            # If person is the child
             if child == person.cpr:
-                if person.bloodType == bloodType:
-                    #print(person.cpr)
+                # Compare fathers and sons bloodtype
+                if person.bloodType == bloodTypeMale:
                     temp.append(person.cpr)
                     temp.append(male.bloodType)
                     FatherSonDonateBlood[male.cpr] = temp
-                    break
+                    counterSon +=1
+                    
+                
+                
+                if len(person.children) > 0:
+                    for personsChild in person.children:
+                        for person2 in data:
+                            temp2 = list()
+                            if (person2.cpr == personsChild):
+                                if person2.bloodType == bloodTypeMale:
+                                    if male.cpr not in grandparent:
+                                        temp2.append(person2.cpr)
+                                        temp2.append(bloodTypeMale)
+                                        grandparent[male.cpr] = temp2
+                                        counterGrandparents +=1
+                                    else:
+                                        grandparent[male.cpr].insert(0, person2.cpr)
+                                        counterGrandparents +=1
+                                elif person2.bloodType == bloodTypeFemale:
+                                        if female.cpr not in grandparent:
+                                            temp2.append(person2.cpr)
+                                            temp2.append(bloodTypeFemale)
+                                            grandparent[female.cpr] = temp2
+                                            counterGrandparents +=1
+                                        else:
+                                            grandparent[female.cpr].insert(0, person2.cpr)
+                                            counterGrandparents +=1
+
+                                    
+                        
+                
+                
+                    
+print(counterGrandparents)  
+grandparent
+#Task 17
 
 
-FatherSonDonateBlood
-
-
-# In[80]:
+# In[75]:
 
 
 # Calculate age distribution
@@ -498,7 +541,7 @@ print("Female", Percent(counterMale,len(age)), "\n", sep = "\t\t")
 # counterFemale and counterMale are quite misleading names, they don't describe that these people don't have children.
 
 # Average age difference between parents
-print("\033[4m"'\033[1m' f"Average age difference between parents(Years)\033[0m:   {Average(ageDifference)}\n")
+print("\033[4m"'\033[1m' f"Average age difference between parents(Years)\033[0m:   {Average(ageDifferenceParents)}\n")
 
 # People with at least one grandparent that is still alive
 print("\033[4m"'\033[1m' "People with at least one grandparent that is still alive" '\033[0m')
@@ -531,15 +574,22 @@ print("Short/Short", Percent(counterSS,len(couples)), "\n", sep = "\t\t")
 # Fathers who can donate blood to their sons
 print("\033[4m"'\033[1m' "FATHERS WHO CAN DONATE BLOOD TO THEIR SONS" '\033[0m')
 print('\033[1m' "Number of fathers:"'\033[0m', len(FatherSonDonateBlood), sep = "\t")
+print('\033[1m' "Number of sons:"'\033[0m', counterSon, sep = "\t\t")
+
+# Grandparents who can donate blood to their grandchild
+print("\033[4m"'\033[1m' "GRADPARENTS WHO CAN DONATE BLOOD TO THEIR GRANDCHILD" '\033[0m')
+print('\033[1m' "Number of fathers:"'\033[0m', len(grandparent), sep = "\t")
+print('\033[1m' "Number of sons:"'\033[0m', counterGrandparents, sep = "\t\t")
 
 
-# In[72]:
+# In[52]:
 
 
+for person in data:
+    print(person.bloodType)
 
 
-
-# In[74]:
+# In[ ]:
 
 
 
