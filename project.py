@@ -1,10 +1,16 @@
-# LIBRARIES
+#!/usr/bin/env python
+# coding: utf-8
+
+# In[1]:
+
 
 import re
+import math
+import sys
 
 
+# In[2]:
 
-# CLASS
 
 class Person:
     def __init__(self,
@@ -27,10 +33,11 @@ class Person:
         self.children = children
 
 
+# In[3]:
 
-# FUNCTIONS
 
 def Percent(x,total):
+    ''' This function calculates the percentage'''# we HAVE TO ADD ERROR HANDLING IF DIVISION BY ZERO!!!!
     result = (x*100)/total
     return round(result, 2)
 
@@ -82,7 +89,8 @@ def Distribution(inputlist, start, end, interval):
 
 
 
-# OPENNING/READING
+# In[4]:
+
 
 # Open file
 try:
@@ -196,22 +204,44 @@ for line in infile:
 infile.close()  
 
 
+# In[93]:
 
-# PROCESSING
 
 #Initialization
-age = list()
-ageFirstFather = list()
-ageFirstMother = list()
-cprChildren = list()
-childWithTwoParents = list()
-ageDifference = list()
 
+# Age of every person
+age = list()
+# Age of a male first time becoming a father
+ageFirstFather = list()
+# Age of a female first time becoming a mother
+ageFirstMother = list()
+# CPR of every children, no duplicates
+cprChildren = list()
+# Age difference between parents
+ageDifferenceParents = list()
+# Temporary list used to calculate men who had children with more than on woman
+women = []
+# Temporary list used to calculate women who had children with more than on man
+men = []
+# couple[0] = male and couple[1] = female, list of classes
+couples = list()
+# Count how many mothers
 counterMother = 0
+# Count how many fathers
 counterFather = 0
+# Count how many females in data who dont have children
 counterFemale = 0
+# Count how many males in data who dont have children
 counterMale = 0
+# Count how many children have at least one grandparent
 countGrandparent = 0
+# Count how many firstborn children are male
+FirstbornMale = 0
+# Count how many firstborn children are female
+FirstbornFemale = 0
+# Count how many 
+countMoreWomen = 0
+countMoreMen = 0
 
 for person in data:
         # Save age to a list
@@ -222,52 +252,208 @@ for person in data:
             
             # Find earliest born child    
             minYear = 100 
+            firstborn = 100
+            
+            # find firstborn child
             for birthdate in person.children:
+                Month = int(birthdate[2:4])
+                
+                if int(birthdate[4:6]) == minYear:
+                    minMonth = int(firstborn[2:4])
+                    
+                    if Month < int(minMonth):
+                        firstborn = birthdate
+                        
+                    if Month == minMonth:
+                        minDay = int(firstborn[0:2])
+                        
+                        if int(birthdate[0:2]) < minDay:
+                            firstborn = birthdate
+                        
+                        #we checked for twins and there are no twins
+                        '''if int(birthdate[0:2]) == minDay:
+                            print('cacca')'''
+                
                 if int(birthdate[4:6]) < minYear:
                     minYear = int(birthdate[4:6])
+                    firstborn = birthdate     
             
-            
+            # find gender of firstborn child
+            if int(firstborn[-1]) % 2 == 0:
+                FirstbornFemale += 1
+            else:
+                FirstbornMale += 1
+                    
             # Count female/male parent
             if (int(person.cpr[-1]) % 2) == 0:
                 counterMother += 1
                 # Save age of becoming first time MOTHER to a list
                 ageFirstMother.append(minYear - int(person.cpr[4:6]))
+                
+                
+                for child in person.children:
+                    for father in data:
+                        if child in father.children:
+                            if int(father.cpr[-1]) % 2 != 0 and father not in men:
+                                men.append(father)
+                if len(men) > 1:
+                    countMoreMen += 1
+                    for man in men:
+                        if [man, person] not in couples:
+                            couples.append([man, person])
+                else:
+                    if [men[0], person] not in couples:
+                        couples.append([men[0], person])
+
+                men = []
+                     
             else:
                 counterFather += 1
                 # Save age of becoming first time FATHER to a list
                 ageFirstFather.append(minYear - int(person.cpr[4:6]))
                 
-            # Find common parent for children
+                
+                for child in person.children:
+                # ana alternative could be to create another list with only class of mothers(maybe the loop is faster?)
+                    for mother in data:
+                        if child in mother.children:
+                            if int(mother.cpr[-1]) % 2 == 0 and mother not in women:
+                                women.append(mother)
+                if len(women) > 1:
+                    countMoreWomen += 1
+                    for woman in women:
+                        couples.append([person, mother])
+                else:
+                    couples.append([person, women[0]])  
+                women = []
+            
+            # Save cpr for each child no duplicates
             for cprnumber in person.children:
-                if cprnumber in cprChildren:
-                    childWithTwoParents.append(cprnumber)
-                cprChildren.append(cprnumber)
+                if cprnumber not in cprChildren:
+                    cprChildren.append(cprnumber)
+                    
+            
         else:
             # Count people who don't have children
             if (int(person.cpr[-1]) % 2) == 0:
                 counterFemale += 1
             else:
                 counterMale += 1
-
-# Calculate the age difference between parents
-for cprnumber in childWithTwoParents:
-    temp = 0
-    for person in data:
-        for cprchildren in person.children:
-            if cprchildren == cprnumber:
-                temp = abs(100 -int(person.cpr[4:6]) - temp)
-    ageDifference.append(temp)
+                
+                
+                
+                
+# Calculate the age difference between parents                
+for couple in couples:
+    male = couple[0]
+    female = couple[1]
+    ageDifferenceParents.append(abs(int(male.cpr[4:6]) - int(female.cpr[4:6])))
+    
 
 # Count people with at least one grandparent    
 for cprnumber in cprChildren:
     for person in data:
-        if person.cpr == cprnumber:
-            if len(person.children) > 0:
+        # se un figlio è presente anche come persona in cpr
+        if person.cpr == cprnumber and len(person.children) > 0:
                 countGrandparent += 1
 
 
 
-# OUTPUT
+# Do tall people marry (or at least get children together)?
+tall = 0
+short = 0
+normal = 0
+(counterTT, counterTN, counterTS, counterNN, counterNS, counterSS) = (0, 0, 0, 0, 0 ,0)
+
+for couple in couples:# check if transforming to a set makes the iteration quicker.
+    # couple(male, female)
+    heightEval = list()
+    
+    for parent in couple:
+        if int(parent.height) <= 150:
+            heightEval.append("short")   
+        elif (int(parent.height) >150 and int(parent.height) <= 180):
+            heightEval.append('normal')
+        elif int(parent.height) > 180:
+            heightEval.append('tall')
+            
+    if "tall" in heightEval:
+        
+        if "normal" in heightEval:
+            counterTN += 1
+        elif "short" in heightEval:
+            counterTS += 1
+        else:
+            counterTT += 1
+    
+    elif "normal" in heightEval:
+        
+        if "short" in heightEval:
+            counterNS += 1
+        else:
+            counterNN += 1
+            
+    else:
+        counterSS += 1
+
+
+
+cprChildrenList = list()
+for person in data:
+    # If person has children
+    if len(person.children) > 0:
+        # Save list of children
+        cprChildrenList.append(person.children)
+
+# Initialize list of cousins
+cousinNumber = list()
+
+
+for children in cprChildrenList:
+    t = list()
+    for child in children:
+        # For every person
+        for person in data:
+            # If person has children
+            if len(person.children) > 0:
+                # If child has children
+                if child == person.cpr:
+                    # Save how many children a child has
+                    t.append(len(person.children))
+
+    # If number of children of a child is more than 2              
+    if len(t) >= 2:
+        cousinNumber.append(t)
+        
+# Average cousin per child
+print(Average([Average(i) for i in cousinNumber]))
+
+# 16 Task
+# Key = father cpr, value = son(s) cpr and common blood type
+FatherSonDonateBlood = dict()
+
+for couple in couples:
+    temp = list()
+    print(couple[0].cpr)
+    male = couple[0]
+    bloodType = male.bloodType
+    for child in male.children:
+        print(child)
+        for person in data:
+            if child == person.cpr:
+                if person.bloodType == bloodType:
+                    #print(person.cpr)
+                    temp.append(person.cpr)
+                    temp.append(male.bloodType)
+                    FatherSonDonateBlood[male.cpr] = temp
+                    break
+
+
+FatherSonDonateBlood
+
+
+# In[80]:
+
 
 # Calculate age distribution
 print("\033[4m"'\033[1m' "AGE DISTRIBUTION" '\033[0m')
@@ -309,7 +495,7 @@ print("\033[4m"'\033[1m' "MEN/WOMEN WITHOUT CHILDREN" '\033[0m')
 print('\033[1m' "Gender", "Percentage(%)"'\033[0m', sep = "\t\t")
 print("Male", Percent(counterFemale,len(age)), sep = "\t\t")
 print("Female", Percent(counterMale,len(age)), "\n", sep = "\t\t") 
-
+# counterFemale and counterMale are quite misleading names, they don't describe that these people don't have children.
 
 # Average age difference between parents
 print("\033[4m"'\033[1m' f"Average age difference between parents(Years)\033[0m:   {Average(ageDifference)}\n")
@@ -317,4 +503,44 @@ print("\033[4m"'\033[1m' f"Average age difference between parents(Years)\033[0m:
 # People with at least one grandparent that is still alive
 print("\033[4m"'\033[1m' "People with at least one grandparent that is still alive" '\033[0m')
 print("Count:", countGrandparent, sep = "\t\t")
-print("Percentage(%):", Percent(countGrandparent,len(age)), sep = "\t\t")
+print("Percentage(%):", Percent(countGrandparent,len(age)), "\n",sep = "\t\t")
+
+# Is the firstborn child likely to be male or female?
+print("\033[4m"'\033[1m' "FIRSTBORN GENDER DISTRIBUTION" '\033[0m')
+print('\033[1m' "Gender", "Percentage(%)"'\033[0m', sep = "\t\t")
+peopleWithChildren = counterMother + counterFather
+print("Male", Percent(FirstbornMale,peopleWithChildren), sep = "\t\t")
+print("Female", Percent(FirstbornFemale,peopleWithChildren), "\n", sep = "\t\t") 
+
+# How many men/women have children with more than one women/men?
+print("\033[4m"'\033[1m' "MEN/WOMEN WITH CHILDREN WITH MORE THAN ONE WOMEN/MEN" '\033[0m')
+print('\033[1m' "Gender", "Percentage(%)"'\033[0m', sep = "\t\t")
+print("Men", Percent(countMoreWomen,(counterMother + counterFemale)), sep = "\t\t")
+print("Women", Percent(countMoreMen,(counterFather + counterMale)),'\n', sep = "\t\t") 
+
+# Do tall people(couples) marry?
+print("\033[4m"'\033[1m' "COUPLES HEIGHT DISTRIBUTION" '\033[0m')
+print('\033[1m' "Heights", "Percentage(%)"'\033[0m', sep = "\t\t")
+print("Tall/Tall", Percent(counterTT,len(couples)), sep = "\t\t")
+print("Tall/Normal", Percent(counterTN,len(couples)), sep = "\t\t")
+print("Tall/Short", Percent(counterTS,len(couples)), sep = "\t\t")
+print("Normal/Normal", Percent(counterNN,len(couples)), sep = "\t\t")
+print("Normal/Short", Percent(counterNS,len(couples)), sep = "\t\t")
+print("Short/Short", Percent(counterSS,len(couples)), "\n", sep = "\t\t")
+
+# Fathers who can donate blood to their sons
+print("\033[4m"'\033[1m' "FATHERS WHO CAN DONATE BLOOD TO THEIR SONS" '\033[0m')
+print('\033[1m' "Number of fathers:"'\033[0m', len(FatherSonDonateBlood), sep = "\t")
+
+
+# In[72]:
+
+
+
+
+
+# In[74]:
+
+
+
+
