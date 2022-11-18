@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[157]:
+# In[1]:
 
 
 import re
@@ -9,7 +9,7 @@ import math
 import sys
 
 
-# In[158]:
+# In[2]:
 
 
 class Person:
@@ -33,7 +33,7 @@ class Person:
         self.children = children
 
 
-# In[159]:
+# In[26]:
 
 
 def Percent(x,total):
@@ -87,38 +87,29 @@ def Distribution(inputlist, start, end, interval):
     # Print last interval
     print(f"{intervallist[-2] + 1} - {end}: \t {Percent(counterEnd, len(inputlist))} \n") 
 
-def PossibleBlood(parentBlood):
-    if 'A' in parentBlood:
-        if 'B' in parentBlood:
-            possibletype = {'A','B','AB','O'}
-        elif 'O' in parentBlood:
-            possibletype = {'A','O'}
-        elif 'AB' in parentBlood:
-             possibletype = {'A','B','AB'}
-        else:
-            possibletype = {'A','O'}
-    elif 'B' in parentBlood:
-        if 'O' in parentBlood:
-            possibletype = {'B','O'}
-        elif 'AB' in parentBlood:
-            possibletype = {'A','B','AB'}
-        else:
-            possibletype = {'B','0'}
-    elif 'O' in parentBlood:
-        if 'AB' in parentBlood:
-            possibletype = {'A','B'}
-        else:
-            possibletype = {'O'}
+
+def PossibleDonor(relativeBlood):
+    if relativeBlood == "O-":
+        possibleRecipient = {"O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"}
+    elif relativeBlood == "O+":
+        possibleRecipient = {"O+", "A+", "B+", "AB+"}
+    elif relativeBlood == "A-":
+        possibleRecipient = {"A-", "A+", "AB-", "AB+"}
+    elif relativeBlood == "A+":
+        possibleRecipient = {"A+", "AB+"}
+    elif relativeBlood == "B-":
+        possibleRecipient = {"B-", "B+", "AB-", "AB+"}
+    elif relativeBlood == "B+":
+        possibleRecipient = {"B+", "AB+"}
+    elif relativeBlood == "AB-":
+        possibleRecipient = {"AB-", "AB+"}
     else:
-        possibletype = {'A','B','AB'}
+        possibleRecipient = {"AB+"}
         
-    return possibletype
-            
-    
-            
+    return possibleRecipient
 
 
-# In[170]:
+# In[4]:
 
 
 # Open file
@@ -133,6 +124,7 @@ except IOError as error:
 data = list()
 currentPerson = Person()
 isPerson = False
+
 
 for line in infile:
     if line.startswith('CPR'):
@@ -229,30 +221,45 @@ for line in infile:
         currentPerson = Person()
         
 # Close file        
-infile.close() 
+infile.close()  
 
 
-# In[184]:
+# In[91]:
 
 
 #Initialization
-age = list()
-ageFirstFather = list()
-ageFirstMother = list()
-cprChildren = list()
-childWithTwoParents = list()
-ageDifference = list()
-women = []
-men = []
-couples = list()
 
+# Age of every person
+age = list()
+# Age of a male first time becoming a father
+ageFirstFather = list()
+# Age of a female first time becoming a mother
+ageFirstMother = list()
+# CPR of every children, no duplicates
+cprChildren = list()
+# Age difference between parents
+ageDifferenceParents = list()
+# Temporary list used to calculate men who had children with more than on woman
+women = []
+# Temporary list used to calculate women who had children with more than on man
+men = []
+# couple[0] = male and couple[1] = female, list of classes
+couples = list()
+# Count how many mothers
 counterMother = 0
+# Count how many fathers
 counterFather = 0
+# Count how many females in data who dont have children
 counterFemale = 0
+# Count how many males in data who dont have children
 counterMale = 0
+# Count how many children have at least one grandparent
 countGrandparent = 0
+# Count how many firstborn children are male
 FirstbornMale = 0
+# Count how many firstborn children are female
 FirstbornFemale = 0
+# Count how many 
 countMoreWomen = 0
 countMoreMen = 0
 
@@ -336,18 +343,17 @@ for person in data:
                     countMoreWomen += 1
                     for woman in women:
                         if [person, woman] not in couples:
-                            couples.append([person, woman])
+                            couples.append([person, mother])
                 else:
                     if [person, women[0]] not in couples:
                         couples.append([person, women[0]])  
                 women = []
-                
-                
-            # Find common parent for children
+            
+            # Save cpr for each child no duplicates
             for cprnumber in person.children:
-                if cprnumber in cprChildren:
-                    childWithTwoParents.append(cprnumber)
-                cprChildren.append(cprnumber)
+                if cprnumber not in cprChildren:
+                    cprChildren.append(cprnumber)
+                    
             
         else:
             # Count people who don't have children
@@ -355,19 +361,16 @@ for person in data:
                 counterFemale += 1
             else:
                 counterMale += 1
-                   
                 
                 
-
-# we must re-do this with couples[]
-# Calculate the age difference between parents
-for cprnumber in childWithTwoParents:
-    temp = 0
-    for person in data:
-        for cprchildren in person.children:
-            if cprchildren == cprnumber:
-                temp = abs(100 -int(person.cpr[4:6]) - temp)
-    ageDifference.append(temp)
+                
+                
+# Calculate the age difference between parents                
+for couple in couples:
+    male = couple[0]
+    female = couple[1]
+    ageDifferenceParents.append(abs(int(male.cpr[4:6]) - int(female.cpr[4:6])))
+    
 
 # Count people with at least one grandparent    
 for cprnumber in cprChildren:
@@ -379,72 +382,23 @@ for cprnumber in cprChildren:
 
 
 # Do tall people marry (or at least get children together)?
-# Do fat people marry or at least get children together? (limits for obesity  taken from: https://en.wikipedia.org/wiki/Classification_of_obesity)
-
+tall = 0
+short = 0
+normal = 0
 (counterTT, counterTN, counterTS, counterNN, counterNS, counterSS) = (0, 0, 0, 0, 0 ,0)
-(counterFF, counterFN, counterFU, counterNwNw, counterNU, counterUU) = (0, 0, 0, 0, 0 ,0)
-flagTallSons = False
-counterTallSon = 0
-nonBiological = list()
 
 for couple in couples:# check if transforming to a set makes the iteration quicker.
     # couple(male, female)
     heightEval = list()
-    tallParents = list()
-    fatEval = list()
-    bloodParents = list()  
-    
     
     for parent in couple:
-        
-        # save blood type of the couple temporarely
-        bloodParents.append(parent.bloodType.replace('+','').replace('-',''))
-        possibleBloodType = PossibleBlood(bloodParents)
-    
-        
-        # Height couple evaluation
         if int(parent.height) <= 150:
             heightEval.append("short")   
         elif (int(parent.height) >150 and int(parent.height) <= 180):
             heightEval.append('normal')
         elif int(parent.height) > 180:
             heightEval.append('tall')
-            tallParents.append(parent)
-        
-        # weight couple evaluation
-        BMI = int(parent.weight)/((int(parent.height)/100)**2)
-        
-        if BMI <= 18.5:
-            fatEval.append('underweight')
-        if BMI > 18.5 and BMI <= 25:
-            fatEval.append('normal weight')
-        if BMI > 25:
-            fatEval.append('fat')
-
             
-    # evaluate blood type of children given the parents: search for non-biological sons
-    for biologicalSon in couple[0].children:
-        for son in data:
-            if biologicalSon == son.cpr:
-                if son.bloodType.replace('+','').replace('-','') not in possibleBloodType:
-                    nonBiological.append(son.cpr)
-                    print(son.bloodType.replace('+','').replace('-',''), possibleBloodType,bloodParents)
-                
-            
-    # Do tall parents get tall children? Tall/tall couples who also have tall children        
-    if len(tallParents) == 2:
-        Tallchildren = tallParents[0].children 
-        
-        for child in Tallchildren:
-            for person in data:
-                if child == person.cpr:
-                    if int(person.height) > 180:
-                        flagTallSons = True
-            if flagTallSons:
-                counterTallSon += 1
-                break
-                
-    # count couples based on height   
     if "tall" in heightEval:
         
         if "normal" in heightEval:
@@ -463,32 +417,104 @@ for couple in couples:# check if transforming to a set makes the iteration quick
             
     else:
         counterSS += 1
-     
-    # count couples based on BMI
-    if 'fat' in fatEval:
+
+
+
+cprChildrenList = list()
+for person in data:
+    # If person has children
+    if len(person.children) > 0:
+        # Save list of children
+        cprChildrenList.append(person.children)
+
+# Initialize list of cousins
+cousinNumber = list()
+
+
+for children in cprChildrenList:
+    t = list()
+    for child in children:
+        # For every person
+        for person in data:
+            # If person has children
+            if len(person.children) > 0:
+                # If child has children
+                if child == person.cpr:
+                    # Save how many children a child has
+                    t.append(len(person.children))
+
+    # If number of children of a child is more than 2              
+    if len(t) >= 2:
+        cousinNumber.append(t)
         
-        if "normal weight" in fatEval:
-            counterFN += 1
-        elif "underweight" in fatEval:
-            counterFU += 1
-        else:
-            counterFF += 1
+# Average cousin per child
+print(Average([Average(i) for i in cousinNumber]))
+
+# 16 and 17 Task
+# Key = father cpr, value = son(s) cpr and common blood type, dictionary of fathers/sons/bloodtype that can donate blood to their sons
+FatherSonDonateBlood = [[0]]
+# Key = grandparent cpr, value = grandchild cpr and common blood type, dictionary of grandparent/grandchild/bloodtype
+grandparent = [[0]]
+# Number of sons that their father can doate blood to them
+counterSon = 0
+# Number of grandchildren that their grandparent can doate blood to them
+counterGrandparents = 0
+# just list of fathers
+k = list()
+# couples = (object male,object female)
+for couple in couples:
+    temp = list()
     
-    elif "normal weight" in fatEval:
-        
-        if "underweight" in fatEval:
-            counterNU += 1
-        else:
-            counterNwNw += 1
-            
-    else:
-        counterUU += 1
-        
-print(counterTallSon, counterTT)
-     
+    male = couple[0]
+    female = couple[1]
+    #print(male.bloodType, male.cpr)
+    bloodTypeMale = male.bloodType
+    bloodTypeFemale = female.bloodType
+    
+    # 1st generation
+    for child in (male.children):
+        for person in data:
+            # If person is the child
+            if child == person.cpr and (int(person.cpr[-1]) % 2 != 0):
+                # Compare fathers and sons bloodtype
+                if person.bloodType in PossibleDonor(bloodTypeMale):
+#                     k.append(male.cpr)   just list of fathers
+                    if male.cpr not in FatherSonDonateBlood[-1]:
+                        FatherSonDonateBlood.append([male.cpr, male.bloodType, person.cpr, person.bloodType])
+                        counterSon += 1
+                    else:
+                        FatherSonDonateBlood[-1].append(person.cpr)
+                        FatherSonDonateBlood[-1].append(person.bloodType)
+                        counterSon += 1
+                        
+                    
+                
+                #If 1st generation person has children (2nd generation)
+                if len(person.children) > 0:
+                    for personsChild in person.children:
+                        for person2 in data:
+                            
+                            temp2 = list()
+                            # personsChild = grandchild
+                            if (person2.cpr == personsChild):
+                               # print(person2.cpr, person.cpr, parent.cpr)
+                                for parent in couple:
+                                    # Male grandparent
+                                    if parent.bloodType in PossibleDonor(person2.bloodType):
+                                        
+                                        if person2.cpr not in grandparent[-1]:
+                                            grandparent.append([person2.cpr, person2.bloodType, parent.cpr, parent.bloodType])
+                                            counterGrandparents +=1
 
 
-# In[185]:
+                                    
+                        
+                
+FatherSonDonateBlood.pop(0)               
+grandparent.pop(0)           
+
+
+# In[92]:
 
 
 # Calculate age distribution
@@ -534,7 +560,7 @@ print("Female", Percent(counterMale,len(age)), "\n", sep = "\t\t")
 # counterFemale and counterMale are quite misleading names, they don't describe that these people don't have children.
 
 # Average age difference between parents
-print("\033[4m"'\033[1m' f"Average age difference between parents(Years)\033[0m:   {Average(ageDifference)}\n")
+print("\033[4m"'\033[1m' f"Average age difference between parents(Years)\033[0m:   {Average(ageDifferenceParents)}\n")
 
 # People with at least one grandparent that is still alive
 print("\033[4m"'\033[1m' "People with at least one grandparent that is still alive" '\033[0m')
@@ -564,33 +590,13 @@ print("Normal/Normal", Percent(counterNN,len(couples)), sep = "\t\t")
 print("Normal/Short", Percent(counterNS,len(couples)), sep = "\t\t")
 print("Short/Short", Percent(counterSS,len(couples)), "\n", sep = "\t\t")
 
-# Do tall parents get tall children?
-print("The", Percent(counterTallSon,counterTT),"% of couples over the total amount of tall/tall couples get at least one tall child.\n")
+# Fathers who can donate blood to their sons
+print("\033[4m"'\033[1m' "FATHERS WHO CAN DONATE BLOOD TO THEIR SONS" '\033[0m')
+print('\033[1m' "Number of fathers:"'\033[0m', len(FatherSonDonateBlood), sep = "\t")
+print('\033[1m' "Number of sons:"'\033[0m', counterSon, sep = "\t\t")
 
-# Do fat people marry?
-print("\033[4m"'\033[1m' "COUPLES WEIGHT DISTRIBUTION" '\033[0m')
-print('\033[1m' "Weights", "Percentage(%)"'\033[0m', sep = "\t\t\t\t\t\t")
-print("Overweight-obese/Overweight-obese", Percent(counterFF,len(couples)), sep = "\t\t")
-print("Overweight-obese/Normal weight   ", Percent(counterFN,len(couples)), sep = "\t\t")
-print("Overweight-obese/Underweight     ", Percent(counterFU,len(couples)), sep = "\t\t")
-print("Normal weight/Normal weight      ", Percent(counterNwNw,len(couples)), sep = "\t\t")
-print("Normal weight/Underweight        ", Percent(counterNU,len(couples)), sep = "\t\t")
-print("Underweight/Underweight          ", Percent(counterUU,len(couples)), "\n", sep = "\t\t")
-
-# Are there any non biological sons/daughters?
-print("There are {0} non-biological sons/daughters.".format(len(nonBiological)),"\nThey correspond to these cpr numbers:",nonBiological, "\n")
-
-
-# In[173]:
-
-
-for person in data:
-    if person.cpr == '030629-9882':
-        print(person.bloodType)
-
-
-# In[ ]:
-
-
-
+# Grandparents who can donate blood to their grandchild
+print("\033[4m"'\033[1m' "GRADPARENTS WHO CAN DONATE BLOOD TO THEIR GRANDCHILD" '\033[0m')
+print('\033[1m' "Number of fathers:"'\033[0m', len(grandparent), sep = "\t")
+print('\033[1m' "Number of sons:"'\033[0m', counterGrandparents, sep = "\t\t")
 
